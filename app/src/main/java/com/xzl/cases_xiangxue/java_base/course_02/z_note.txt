@@ -1,0 +1,123 @@
+多线程由来:
+    cpu时间片分配，并发，并行，
+    JMM: Java内存模型
+
+==========================
+
+Java 多线程启动方式
+    继承类Thread
+    实现Runnable
+    实现Callable，允许有返回值,FutureTask...
+
+    FutureTask get方法堵塞，并且get方法可以设定堵塞多久，比较有用
+
+============================
+多线程安全停止
+    1 自然执行完
+    2 抛出异常
+
+    如何安全的中断线程，word+实践
+
+    interrupt() 协作式,而非暴利式(stop()是暴力式), 为了更好的释放线程中的资源
+
+    记住，自定提供boolean标志位来做while中断，volitle atomicBoolean 修饰，在多线程环境下会出问题吗？测试看看
+    一般情况下可以正常工作，但是在很多情况下不能正常工作，while(cancel) 比如堵塞情况下，take()方法，在take()方法没有结束前，
+    如果采取设置标志位来退出循环的模式，take没有从阻塞唤醒之前，不会判定标志位，会一直堵塞，走完一轮while循环才生效；
+    只有用isInterrupted()，调用interrupt（）方法后，才能打断take() 进入异常捕获catch中
+
+    用标志位会造成响应不及时；
+
+    java线程是协作式，而非抢占式
+    调用一个线程的interrupt() 方法中断一个线程，并不是强行关闭这个线程，只是跟这个线程打个招呼，将线程的中断标志位置为true，线程是否中断，由线程本身决定。
+    isInterrupted() 判定当前线程是否处于中断状态。
+    方法里如果抛出InterruptedException，线程的中断标志位会被复位成false，如果确实是需要中断线程，要求我们自己在catch语句块里再次调用interrupt()。
+
+
+
+============================
+多线程生命周期，状态切换
+
+看声明周期的图....
+
+线程时间片到期 || yield()
+获取执行权 || join()
+
+yield()和join注意下；
+
+run()和start()注意下
+
+线程优先级，设置了也无法保证，建议不用(setPriority())
+
+守护线程：
+和主线程共死,主线程死了，守护线程也死了,setDaemon 后，依附在当前线程环境中，作为当前线程的守护线程...当前线程跑完，守护线程自动结束
+在start()前调用
+GC线程，是守护线程
+
+守护线程的finnaly{} 语句块不一定会执行,所以如果一定要保证线程结束的时候，需要清理资源，就不能用守护线程，守护线程死亡的时候，
+不一定保证能跑完所有语句，finnally语句块也往往执行不了
+
+==============================
+线程间的共享（为什么叫共享，不统称同步，https://blog.csdn.net/scgyus/article/details/79499650）
+
+
+
+synchronized，内置锁，
+    http://www.pianshen.com/article/9480701498/
+    private byte[] lock = new byte[0];
+    synchronized (lock){}
+    synchronized 方法 或者 synchronized(this) 一样;  还有一种形式，synchronized(自己创建的普通对象)
+    static synchronized 方法  或者 synchronized（ClassName.class) 一样; 还有一种新式，synchronized(自己创建的静态对象)
+    对象锁
+    类锁
+    本质都是锁住对象
+
+volatile
+    最轻量的同步机制
+    保证可见性，不能保证原子性
+
+    从内存模型角度来理解
+    getParam 从主内存获取
+    setParam 刷到主内存
+
+    setParam(){
+        param = param + 10 //非原子操作，有三条指令，可能在执行到第二条指令的时候，其他线程进来了。。。。
+    }
+
+    所以非线程安全。。。
+
+    用途：只有一个线程写，多个线程读,可以用用....只能确保可见性
+
+    可以防止指令重排序
+
+ThreadLocal
+
+    线程本地变量，变量不会冲突
+
+    ThreadLocal尽量存储比较小的变量。。。
+
+    如果变量比较大，用后面的原子封装...
+
+=======================
+
+线程间协作
+    wait()
+    notify()/notifyAll()
+
+    等待通知的标准形式记住...
+
+    尽量使用notifyAll()  而不是notify()，发生信号丢失。。。
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
