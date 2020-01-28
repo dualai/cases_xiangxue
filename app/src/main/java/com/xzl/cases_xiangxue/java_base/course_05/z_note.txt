@@ -1,0 +1,103 @@
+显式锁，从语言层面提供的接口：
+
+Lock：
+
+和sync锁的区别，sync获取锁的过程不能中断，获取的过程没有超时的概念，获取不到就一直等着
+
+和sync对比：
+
+Lock接口和synchronized的比较
+synchronized 代码简洁
+
+Lock：获取锁可以被中断，超时获取锁，尝试获取锁，读多写少用读写锁
+
+并且synchronized在不断的优化，除非有以上需求
+
+-------------
+lock：
+
+unlock：放入finally{}
+
+trylock：在多线程环境下执行，可以返回是否成功获取到锁...
+
+======================
+可重入锁,同一个线程对同一个锁需要多次获得，可以多次进入，最典型的例子就是递归，相当于内部有个锁的计数器；
+可重入锁ReentrantLock、所谓锁的公平和非公平
+如果在时间上，先对锁进行获取的请求，一定先被满足，这个锁就是公平的，不满足，就是非公平的
+非公平的效率一般来讲更高
+
+ReadWriteLock接口和读写锁ReentrantReadWriteLock
+ReentrantLock和Syn关键字，都是排他锁，
+读写锁：同一时刻允许多个读线程同时访问，但是写线程访问的时候，所有的读和写都被阻塞，最适宜与读多写少的情况
+
+阻塞和挂起不是一个概念。。。线程的挂起操作实质上就是线程进入非可执行状态下,在这个状态下CPU不会分给线程时间片,
+进入这个状态可以用来暂停一个线程的运行。 线程挂起后,可以通过重新唤醒线程来使之恢复运行。
+
+synchronized，竞争不到的线程是挂起还是阻塞？
+
+ReentrantLock：
+可以指定公平或者非公平...
+
+=======================
+Condition：
+用于await()/signal/sinalAll,并且也有超时机制...
+
+Condition 可以分组，同一个lock可以返回多个condition，用来分组阻塞/通知线程...例如下面:
+    private final Lock lock = new ReentrantLock();
+    private final Condition full = lock.newCondition();
+    private final Condition notFull = lock.newCondition();
+
+Condition 尽量使用signal()  而不是signalAll(),不通的条件，唤醒不同的线程...
+比如消费者数量为0的时候堵塞；消费了以后，通知生产者；生成者生产满了的时候堵塞，但是生产了以后，要通知消费者；
+=======================
+LockSupport：
+park开头的方法
+负责阻塞线程
+unpark(Thread thread)方法
+负责唤醒线程
+
+
+
+=============================
+AQS  AbstractQueuedSynchronizer
+
+AQS 主要是用来构建显式锁用的，内置锁是语言层面的，跟AQS无关;
+
+显式锁、读写锁、CountDownLatch等都是基于AQS来实现相关功能的,是个非常强大的工具...
+
+集成AbstractQueuedSynchronizer来实现自己的同步类...
+
+AbstractQueuedSynchronizer深入分析
+什么是AQS？学习它的必要性
+AQS使用方式和其中的设计模式
+继承，模板方法设计模式
+了解其中的方法
+模板方法：
+独占式获取
+accquire
+acquireInterruptibly
+tryAcquireNanos
+共享式获取
+acquireShared
+acquireSharedInterruptibly
+tryAcquireSharedNanos
+独占式释放锁
+release
+共享式释放锁
+releaseShared
+需要子类覆盖的流程方法
+独占式获取  tryAcquire
+独占式释放  tryRelease
+共享式获取 tryAcquireShared
+共享式释放  tryReleaseShared
+
+isHeldExclusively()：该线程是否正在独占资源。只有用到condition才需要去实现它。
+
+同步状态state：
+getState:获取当前的同步状态
+setState：设置当前同步状态
+compareAndSetState 使用CAS设置状态，保证状态设置的原子性
+
+
+-------------
+AQS 暂时没仔细看过，看完再回过头来看看到底用途是什么

@@ -1,0 +1,140 @@
+线程池,自定义线程池
+MyThreadPool2...
+
+往往自定义的时候，队列中都存着Runnable，然后把runnable取出，扔进线程里头执行...
+
+1、线程必须在池子已经创建好了，并且可以保持住，要有容器保存多个线程；
+2、线程还要能够接受外部的任务，运行这个任务。容器保持这个来不及运行的任务.
+
+private class WorkThread extends Thread{
+    	@Override
+    	public void run(){
+    		Runnable r = null;
+    		try {
+				while (!isInterrupted()) {
+					r = taskQueue.take(); // 堵塞，直接下面都执行完了，再回来再次取下一个任务...
+					if(r!=null) {
+						System.out.println(getId()+" ready exec :"+r);
+						r.run(); //运行在当前线程...
+					}
+					r = null;//help gc;
+				}
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+    	}
+
+    	public void stopWorker() {
+    		interrupt();
+    	}
+    }
+
+自定义线程池缺点：
+
+1、启动规定数目的线程数，无法调整实时运行线程的数量，可能某些时候,有很多线程阻塞着，take位置，影响程序性能...
+2、一开始任务队列总大小定义成100个，突然间涌进了200个任务，那么其他任务都堵塞在ArrayBlockQueue的put位置
+
+================================================
+线程池
+execute，没有返回值
+
+submit，有返回值
+
+====================================================
+
+线程池的创建
+ThreadPoolExecutor
+
+https://segmentfault.com/a/1190000016629668
+
+
+corePoolSize    核心线程池中的最大线程数,  一直存活，除非调用 allowsCoreThreadTimeOut,如果要一次性全部启动核心线程，调用...方法
+
+maximumPoolSize 总线程池中的最大线程数
+
+keepAliveTime   空闲线程的存活时间, 非核心线程
+
+unit            keepAliveTime的单位
+
+workQueue       任务队列, 保存已经提交但尚未被执行的线程
+
+threadFactory   线程工厂(用于指定如果创建一个线程)
+
+handler         拒绝策略
+
+
+================================
+合理配置线程池
+根据任务的性质来：计算密集型（CPU），IO密集型，混合型
+计算密集型：加密，大数分解，正则…….， 线程数适当小一点，最大推荐：机器的Cpu核心数+1，为什么+1，防止页缺失，(机器的Cpu核心=Runtime.getRuntime().availableProcessors();)
+
+IO密集型：读取文件，数据库连接，网络通讯, 线程数适当大一点，机器的Cpu核心数*2,
+
+混合型：尽量拆分,拆分出一个cpu密集和一个io密集，配置两种线程池，IO密集型远大于计算密集型，拆分意义不大，当IO密集型约等于计算密集型;
+
+队列的选择上，应该使用有界，无界队列可能会导致内存溢出，OOM
+
+
+===============================
+
+预定义线程池：
+FixedThreadPool
+创建固定线程数量的，适用于负载较重的服务器，使用了无界队列
+
+-------------
+SingleThreadExecutor
+创建单个线程，需要顺序保证执行任务，不会有多个线程活动，使用了无界队列
+
+--------------
+CachedThreadPool
+会根据需要来创建新线程的，执行很多短期异步任务的程序，使用了SynchronousQueue
+
+如果主线程提交任务速度，远高于处理任务的速度...
+
+---------------
+WorkStealingPool（JDK7以后）
+基于ForkJoinPool实现
+----------
+
+ScheduledThreadPoolExecutor:
+
+需要定期执行周期任务，Timer不建议使用了。
+newSingleThreadScheduledExecutor：只包含一个线程，只需要单个线程执行周期任务，保证顺序的执行各个任务
+newScheduledThreadPool 可以包含多个线程的，线程执行周期任务，适度控制后台线程数量的时候
+方法说明：
+schedule：只执行一次，任务还可以延时执行
+scheduleAtFixedRate：提交固定时间间隔的任务
+scheduleWithFixedDelay：提交固定延时间隔执行的任务
+
+
+--------------
+Executor 框架
+
+Executors 创建各种线程池...
+
+----------------------
+CompletionService https://blog.csdn.net/u013851082/article/details/69946364
+
+"如果向Executor提交了一组计算任务，并且希望在计算完成后获得结果，那么可以保留与每个任务关联的Future，
+然后反复使用get方法，同时将参数timeout指定为0，从而通过轮询来判断任务是否完成。这种方法虽然可行，但却有些繁琐
+。幸运的是，还有一种更好的方法：完成服务CompletionService。"
+
+jdk并发包中的CompletionService接口的作用是以异步的方式一边使用submit()方法执行任务，
+一边处理使用take()方法取得已完成的任务的结果，这样可以将执行任务与处理任务结果分离开来同时进行处理，
+提高效率。并按照完成这些任务的时间顺序处理它们的结果，可以解决Future的get阻塞问题。
+
+CompletionService 的take()方法获取最先执行完的线程的Future对象。
+
+如果向Executor提交了一组计算任务，并且希望在计算完成后获得结果，那么可以保留与每个任务关联的Future，
+然后反复使用get方法，同时将参数timeout指定为0，从而通过轮询来判断任务是否完成。这种方法虽然可行，但却有些繁琐。
+幸运的是，还有一种更好的方法：完成服务CompletionService
+
+1.繁琐的做法
+通过一个List来保存每个任务返回的Future，然后轮询这些Future，直到每个Future都已完成。我们不希望出现因为排在前面的任
+务阻塞导致后面先完成的任务的结果没有及时获取的情况，所以在调用get方式时，需要将超时时间设置为0。
+
+2.使用CompletionService
+
+结果集的顺序，因为ExecutorCompletionService是根据完成的先后，顺序是不定的
+
+CompletionService里面有一个BlockingQueue维护结果，如果不去取结果就会导致一直里面一直增长

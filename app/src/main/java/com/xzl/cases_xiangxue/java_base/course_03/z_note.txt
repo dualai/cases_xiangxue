@@ -1,0 +1,69 @@
+fork/join: 分而治之
+java 相关框架： ForkJoinPool、ForkJoinTask相关
+
+forkjoin:
+有返回值，同步；
+没有返回值，异步，比如搜索文件夹操作，
+
+ThreadPoolExecutor中每个任务都是由单个线程独立处理的，如果出现一个非常耗时的大任务(比如大数组排序)，
+就可能出现线程池中只有一个线程在处理这个大任务，而其他线程却空闲着，这会导致CPU负载不均衡：空闲的处理器无法帮助工作繁忙的处理器。
+ForkJoinPool就是用来解决这种问题的：将一个大任务拆分成多个小任务后，使用fork可以将小任务分发给其他线程同时处理，
+使用join可以将多个线程处理的结果进行汇总；这实际上就是分治思想的并行版本。
+
+
+
+工作窃取：
+
+
+
+=======================================
+
+常用的并发工具类：
+
+CountDownLatch:
+是一组线程等待其他的线程完成工作以后在执行，加强版join
+await用来等待，countDown负责计数器的减一
+
+计数器和线程数不一定一致，计数器可以在一个线程减多次
+
+
+CyclicBarrier:
+
+
+-----------
+CountDownLatch
+作用：是一组线程等待其他的线程完成工作以后在执行，加强版join
+await用来等待，countDown负责计数器的减一，自己无法控制什么时候放行；由初始化线程来技术决定
+
+CyclicBarrier
+让一组线程达到某个屏障，被阻塞，一直到组内最后一个线程达到屏障时，屏障开放，所有被阻塞的线程会继续运行CyclicBarrier(int parties)
+CyclicBarrier(int parties, Runnable barrierAction)，屏障开放，barrierAction定义的任务会执行
+CountDownLatch和CyclicBarrier辨析
+1、countdownlatch放行由第三者控制，CyclicBarrier放行由一组线程本身控制
+2、countdownlatch放行条件>=线程数，CyclicBarrier放行条件=线程数
+
+由工作线程自己决定，不需要第三方来决定
+
+
+Semaphore:
+控制同时访问某个特定资源的线程数量，用在流量控制
+Semaphore 是 synchronized 的加强版，作用是控制线程的并发数量。就这一点而言，单纯的synchronized 关键字是实现不了的。
+
+acquire()
+
+release()
+
+-----Future
+Callable、Future和FutureTask
+
+isDone，结束，正常还是异常结束，或者自己取消，返回true；
+isCancelled 任务完成前被取消，返回true；
+cancel（boolean）：
+1、	任务还没开始，返回false
+2、	任务已经启动，cancel（true），中断正在运行的任务，如果中断成功，返回true，cancel（false），不会去中断已经运行的任务
+3、	任务已经结束，返回false
+
+包含图片和文字的文档的处理：图片（云上），可以用future去取图片，主线程继续解析文字。
+
+Callable future futureTask 一般不直接使用，一般用在线程池里头；
+

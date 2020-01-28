@@ -1,0 +1,152 @@
+并发容器：
+hashmap：线程不安全
+
+hashtable：效率低下，已经被淘汰，加锁太重...
+
+ConcurrentHashMap: 线程安全且高效的HashMap实现，对比hashTable，锁分离技术...
+
+1、ConcurrentHashMap实现原理是怎么样的或者问ConcurrentHashMap如何在保证高并发下线程安全的同时实现了性能提升？
+答：ConcurrentHashMap允许多个修改操作并发进行，其关键在于使用了锁分离技术。它使用了多个锁来控制对hash表的不同部分进行的修改。
+内部使用段(Segment)来表示这些不同的部分，每个段其实就是一个小的hash table，只要多个修改操作发生在不同的段上，它们就可以并发进行。
+
+2、初始化做了什么事？
+
+   根据自己的实际情况设置参数。。。
+
+   ConcurrentHashMap<String,String> concurrentHashMap = new ConcurrentHashMap<>(16,0.75f,16);
+
+初始化有三个参数
+initialCapacity：初始容量大小 ，默认16。
+loadFactor, 扩容因子，默认0.75，当一个Segment存储的元素数量大于initialCapacity* loadFactor时，该Segment会进行一次扩容。
+concurrencyLevel 并发度，默认16。并发度可以理解为程序运行时能够同时更新ConccurentHashMap且不产生锁竞争的最大线程数，
+实际上就是ConcurrentHashMap中的分段锁个数，即Segment[]的数组长度。
+如果并发度设置的过小，会带来严重的锁竞争问题；如果并发度设置的过大，原本位于同一个Segment内的访问会扩散到不同的Segment中，
+CPU cache命中率会下降，从而引起程序性能下降。
+
+
+
+-----------------------------------------------
+ConcurrentSkipListMap: 类似于TreeMap 有序容器 并发版本
+
+ConcurrentSkipListSet: 类似于TreeSet 有序容器 并发版本
+
+SkipList:
+    跳表： 一种特殊的链表，抛弃了红黑树，用了跳表... 以空间换时间... 随机数据结构... 查找的时间复杂度接近于红黑树
+元素能否成为层层索引，随机方式..
+
+ConcurrentLinkedQueue: LinkedList的并发版本
+无界非阻塞队列，底层是个链表，遵循先进先出原则。
+add,offer将元素插入到尾部，peek（拿头部的数据，但是不移除）和poll（拿头部的数据，但是移除）
+
+写时复制容器:
+读的时候不加锁，写入和删除加锁...
+缺点
+  耗费内存... CopyOnWrite容器只能保证数据的最终一致性，不能保证数据的实时一致性。
+  所以如果你希望写入的的数据，马上能读到，请不要使用CopyOnWrite容器
+
+CopyOnWriteArraySet:
+
+CopyOnWriteArrayList:
+
+==========================================
+
+阻塞队列:
+
+·ArrayBlockingQueue：一个由数组结构组成的有界阻塞队列。
+按照先进先出原则，要求设定初始大小
+
+·LinkedBlockingQueue：一个由链表结构组成的有界阻塞队列。
+按照先进先出原则，可以不设定初始大小，Integer.Max_Value
+
+ArrayBlockingQueue和LinkedBlockingQueue不同：
+    锁上面：ArrayBlockingQueue只有一个锁，LinkedBlockingQueue用了两个锁，
+    实现上：ArrayBlockingQueue直接插入元素，LinkedBlockingQueue需要转换。
+
+队列中锁的实现不同： https://blog.csdn.net/weixin_42440948/article/details/82991831
+ArrayBlockingQueue实现的队列中的锁是没有分离的，即生产和消费用的是同一个锁；
+LinkedBlockingQueue实现的队列中的锁是分离的，即生产用的是putLock，消费是takeLock
+
+在生产或消费时操作不同：
+ArrayBlockingQueue实现的队列中在生产和消费的时候，是直接将枚举对象插入或移除的；
+LinkedBlockingQueue实现的队列中在生产和消费的时候，需要把枚举对象转换为Node进行插入或移除，会影响性能
+
+队列大小初始化方式不同：
+ArrayBlockingQueue实现的队列中必须指定队列的大小；
+LinkedBlockingQueue实现的队列中可以不指定队列的大小，但是默认是Integer.MAX_VALUE
+
+--------------------------------------
+·PriorityBlockingQueue：一个支持优先级排序的无界阻塞队列。
+默认情况下，按照自然顺序，要么实现compareTo()方法，指定构造参数Comparator
+
+-----------------------------------------------
+
+·DelayQueue：一个使用优先级队列实现的无界阻塞队列。
+支持延时获取的元素的阻塞队列，元素必须要实现Delayed接口。适用场景：实现自己的缓存系统，订单到期，限时支付等等。
+
+时长单位，纳秒...
+
+超时后，可以从队列中拿出....
+
+排序，一般可以按照剩余时间排序，这样子可以保持队头元素剩余时间最短...
+
+-----------------------------
+
+·SynchronousQueue：一个不存储元素的阻塞队列。
+是一个不存储元素的阻塞队列，会直接将任务交给消费者，必须等队列中的添加元素被消费后才能继续添加新的元素。
+
+容量永远为0
+适合一对一的生产消费场景，由于经过很多优化，性能是很好的。因此容量为1的队列，就别使用其他阻塞queue了
+实现上也用了CAS、自旋锁
+
+因为SynchronousQueue没有存储功能，因此put和take会一直阻塞，直到有另一个线程已经准备好参与到交付过程中。
+仅当有足够多的消费者，并且总是有一个消费者准备好获取交付的工作时，才适合使用同步队列。
+
+--------------------
+
+·LinkedTransferQueue：一个由链表结构组成的无界阻塞队列。
+
+LinkedTransferQueue 各个方法流程图：
+https://www.liangzl.com/get-article-detail-126668.html
+
+原理：
+非阻塞
+基于CAS无锁
+Doug Lea说从功能角度来讲，LinkedTransferQueue实际上是ConcurrentLinkedQueue、SynchronousQueue（公平模式）和LinkedBlockingQueue的超集。
+而且LinkedTransferQueue更好用，因为它不仅仅综合了这几个类的功能，同时也提供了更高效的实现。
+
+transfer()， 生产者生产完数据，在往队列插入数据的时候，先不急着插入，先看看消费者是否正处于"无数据消费而处于堵塞状态"，
+如果是的话，那就直接把生产完的数据交给消费者消费，省去了插入队列中的一步, 如果消费
+者没有处于待消费状态，就插入队列；
+必须要消费者消费了以后方法才会返回，哪怕是transfer() 能把元素放入队列，也要等消费者消费完成了以后，才能返回...
+
+transfer方法，用于将指定元素e传递给消费者线程(调用take/poll方法)。如果有消费者线程正在阻塞等待，则调用transfer方法的线程会直接将元素传递给它；
+如果没有消费者线程等待获取元素，则调用transfer方法的线程会将元素插入到队尾，然后阻塞等待，直到有消费者线程取走该元素：
+
+tryTransfer()，尝试生产者生产的元素能否直接传给消费者来消费，如果没有消费者，那么返回false，并且元素不入队（看方法注释）
+无论消费者是否接收，方法都立即返回。
+
+和SynchronousQueue相比，LinkedTransferQueue多了一个可以存储的队列，与LinkedBlockingQueue相比，
+LinkedTransferQueue多了直接传递元素
+
+LinkedTransferQueue是JDK1.7才添加的阻塞队列，基于链表实现的FIFO无界阻塞队列，
+是ConcurrentLinkedQueue（循环CAS+volatile 实现的wait-free并发算法）、SynchronousQueue（公平模式下转交元素）、
+LinkedBlockingQueue（阻塞Queue的基本方法）的超集。
+而且LinkedTransferQueue更好用，因为它不仅仅综合了这几个类的功能，同时也提供了更高效的实现。
+
+BlockingQueue接口，它是指这样的一个队列：当生产者向队列添加元素但队列已满时，生产者会被阻塞；当消费者从队列移除元素但队列为空时，消费者会被阻塞。
+
+LinkedTransferQueue采用的一种预占模式。意思就是消费者线程取元素时，如果队列为空，那就生成一个节点（节点元素为null）入队，
+然后消费者线程被等待在这个节点上，后面生产者线程入队时发现有一个元素为null的节点，生产者线程就不入队了，直接就将元素填充到该节点，
+唤醒该节点等待的线程，被唤醒的消费者线程取走元素，从调用的方法返回。即找到匹配的节点不入队，找不到根据how参数入队。
+
+当 put 时，如果有等待的线程，就直接将元素 “交给” 等待者， 否则直接进入队列。
+put和 transfer 方法的区别是，put 是立即返回的， transfer 是阻塞等待消费者拿到数据才返回。transfer方法和 SynchronousQueue的 put 方法类似。
+
+--------------------
+
+·LinkedBlockingDeque：一个由链表结构组成的双向阻塞队列。
+可以从队列的头和尾都可以插入和移除元素，实现工作密取，方法名带了First对头部操作，带了last从尾部操作，
+另外：add=addLast;	remove=removeFirst;	take=takeFirst
+
+-----
+尽量使用有界的！！！

@@ -1,0 +1,126 @@
+重点：有意识到synchronized改成乐观锁来实现的时候
+
+原子操作CAS：乐观锁 原理  Compare And Swap
+
+利用了现代计算机处理器都支持的CAS指令，循环这个指令，直到成功为止
+
+JDK 5之前Java语言是靠synchronized关键字保证同步的，这是一种独占锁，也是是悲观锁。
+
+syn基于阻塞的锁的机制，重量级，1、被阻塞的线程优先级很高，2、拿到锁的线程一直不释放锁怎么办？3、大量的竞争，消耗cpu，同时带来死锁或者其他安全。
+CAS的原理
+
+比如计数器，count++ 用sync去包装，非常重量级
+
+CAS(Compare And Swap)，指令级别保证这是一个原子操作
+三个运算符：  一个内存地址V，一个期望的值A，一个新值B（期望值A是用来做对比的。。。）
+基本思路：如果地址V上的值和期望的值A相等，就给地址V赋给新值B，如果不是，不做任何操作。
+循环（死循环，自旋）里不断的进行CAS操作
+
+对CAS的理解，CAS是一种无锁算法，CAS有3个操作数，内存值V，旧的预期值A，要修改的新值B。
+当且仅当预期值A和内存值V相同时，将内存值V修改为B，否则什么都不做。
+
+也就是说，sync必须产生等待和堵塞，但是CAS谁都可以进入线程，不需要切换线程，只是会对比期望值，进入线程后有修改成功和修改失败之分，失败后会退出
+
+CAS的问题
+A---》B----》A，版本号:      A1B2-A3
+CAS操作长期不成功，cpu不断的循环，
+
+CAS 原理，悲观锁与乐观锁：
+https://blog.csdn.net/qq_37113604/article/details/81582784
+
+乐观锁主要就是两个步骤：冲突检测和数据更新。当多个线程尝试使用CAS同时更新同一个变量时，
+只有一个线程可以更新变量的值，其他的线程都会失败，失败的线程并不会挂起，而是告知这次竞争中失败了，并可以再次尝试。
+
+-----------CAS ---所带来的的问题
+A---》B----》A，版本号:      A1B2-A3
+
+CAS操作长期不成功，cpu不断的循环，
+
+只能保证一个共享变量; 但是在java中可以把多个共享变量合并成一个共享变量来操作。。。AtomicReference，保证原子对象
+
+==================================================
+Jdk中相关原子操作类的使用
+更新基本类型类：AtomicBoolean，AtomicInteger，AtomicLong
+更新数组类：AtomicIntegerArray，AtomicLongArray，AtomicReferenceArray
+更新引用类型：AtomicReference，AtomicMarkableReference，AtomicStampedReference
+原子更新字段类： AtomicReferenceFieldUpdater，AtomicIntegerFieldUpdater，AtomicLongFieldUpdater
+
+AtomicReference：
+
+static AtomicReference<UserInfo> userRef = new AtomicReference<UserInfo>();
+UserInfo user = new UserInfo("Mark", 15);//要修改的实体的实例
+userRef.set(user);
+
+UserInfo updateUser = new UserInfo("Bill", 17);//要变化的新实例
+userRef.compareAndSet(user, updateUser);
+System.out.println(userRef.get().getName());
+System.out.println(userRef.get().getAge());
+System.out.println(user.getName());
+System.out.println(user.getAge());
+
+以上userRef被更新了，但是user没有被更新，所以userRef和user是两个内存地址；
+
+
+AtomicMarkableReference、UseAtomicStampedReference：带版本的Atomic，为了解决ABA问题
+
+AtomicMarkableReference，boolean 有没有动过
+
+AtomicStampedReference  动过几次
+
+----------
+
+AtomicReferenceArray:
+操作后，同样发生变化的是reference包装类本身，数组本身不发生变化，
+
+
+---
+=============================================
+互斥锁：
+mutexlock
+
+自旋锁（spinlock）：
+是指当一个线程在获取锁的时候，如果锁已经被其它线程获取，那么该线程将循环等待，
+然后不断的判断锁是否能够被成功获取，直到获取到锁才会退出循环。
+获取锁的线程一直处于活跃状态，但是并没有执行任何有效的任务，使用这种锁会造成busy-waiting。
+
+CAS与Synchronized的使用情景:
+1、对于资源竞争较少（线程冲突较轻）的情况，使用synchronized同步锁进行线程阻塞和唤醒切换以及用户态内核态间的切换操作额外浪费消耗cpu资源；
+而CAS基于硬件实现，不需要进入内核，不需要切换线程，操作自旋几率较少，因此可以获得更高的性能。
+2、对于资源竞争严重（线程冲突严重）的情况，CAS自旋的概率会比较大，从而浪费更多的CPU资源，效率低于synchronized。
+补充： synchronized在jdk1.6之后，已经改进优化。synchronized的底层实现主要依靠Lock-Free的队列，基本思路是自旋后阻塞，
+竞争切换后继续竞争锁，稍微牺牲了公平性，但获得了高吞吐量。在线程冲突较少的情况下，
+可以获得和CAS类似的性能；而线程冲突严重的情况下，性能远高于CAS。
+
+
+==============================================
+
+方法区别：
+incrementAndGet() 无线循环，直到成功
+首先可以看到他是通过一个无限循环(spin)直到increment成功为止.
+循环的内容是
+1.取得当前值
+2.计算+1后的值
+3.如果当前值还有效(没有被)的话设置那个+1后的值
+4.如果设置没成功(当前值已经无效了即被别的线程改过了), 再从1开始.
+
+compareAndSet()
+
+You can look at the code for better understanding :
+
+public final boolean getAndSet(boolean newValue) {
+    for (;;) {
+        boolean current = get();
+        if (compareAndSet(current, newValue))
+            return current;
+    }
+}
+In getAndSet, if the value of the boolean has changed between the time you get() the old value and the time you try to change its value,
+compareAndSet won't change its value. Therefore, getAndSet calls compareAndSet in a loop until the boolean is set to the new value.
+As to your code example :
+flag.getAndSet(false) returns the old value of the AtomicBoolean. On the other hand,
+flag.compareAndSet(x,false) (note there are two arguments) returns whether the AtomicBoolean was modified,
+ or in other words, it returns whether the old value of the AtomicBoolean was x.
+
+
+Synchronized 关键字使用、底层原理、JDK1.6 之后的底层优化以及 和ReenTrantLock 的对比
+https://blog.csdn.net/qq_34337272/article/details/83409990
