@@ -1,2 +1,2 @@
-include ':app', ':lib'
+include ':javabase', ':lib', ':rxjava'
 rootProject.name='cases_xiangxue'
