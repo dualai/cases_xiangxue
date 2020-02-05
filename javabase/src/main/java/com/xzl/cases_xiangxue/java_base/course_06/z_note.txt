@@ -48,6 +48,9 @@ CopyOnWriteArraySet:
 
 CopyOnWriteArrayList:
 
+当然也有List synchronizedList = Collections.synchronizedList(new ArrayList());
+但是当你不可避免使用contains() 进行搜索的时，它不可避免会锁住整个list，太恐怖了。
+
 ==========================================
 
 阻塞队列:
