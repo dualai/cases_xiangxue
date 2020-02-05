@@ -170,7 +170,7 @@ ThreadLocal
 SyncTest
 
 
-
+局部同步锁，两个线程相互堵塞取锁...
 
 
 
