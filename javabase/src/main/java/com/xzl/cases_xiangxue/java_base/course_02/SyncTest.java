@@ -1,5 +1,6 @@
 package com.xzl.cases_xiangxue.java_base.course_02;
 
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -52,6 +53,8 @@ public class SyncTest {
                 System.out.println("b55555555555555555");
             }
         }).start();
+
+
 
     }
 }

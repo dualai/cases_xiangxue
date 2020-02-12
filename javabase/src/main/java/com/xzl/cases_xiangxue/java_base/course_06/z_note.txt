@@ -23,7 +23,13 @@ concurrencyLevel 并发度，默认16。并发度可以理解为程序运行时�
 如果并发度设置的过小，会带来严重的锁竞争问题；如果并发度设置的过大，原本位于同一个Segment内的访问会扩散到不同的Segment中，
 CPU cache命中率会下降，从而引起程序性能下降。
 
+为什么要有ConcurrentHashMap，而不直接使用HashMap和HashTable。
+1.因为多线程环境下，使用Hashmap进行put操作会引起死循环，导致CPU利用率接近100%，所以在并发情况下不能使用HashMap。
+2.HashTable也是线程安全的，因为HashTable在很多方法上加了synchronized，会锁住整个map，所有访问HashTable的线程都必须竞争同一把锁，效率很低。
+3.ConcurrentHashMap是线程安全的，在HashMap的基本上，加上了Segment数组（分段锁），假如容器里有多把锁，每一把锁用于锁容器其中一部分数据，那么当多线程访问容器里不同数据段的数据时，线程间就不会存在锁竞争，从而可以有效的提高并发访问效率。
+Segment数组是一种可重入锁ReentrantLock，每个Segment守护者一个HashEntry数组里的元素,当对HashEntry数组的数据进行修改时，必须首先获得它对应的Segment锁。
 
+ConcurrentHashMap的缺点：在统计size时，需要获取所有分段锁才能统计。
 
 -----------------------------------------------
 ConcurrentSkipListMap: 类似于TreeMap 有序容器 并发版本
@@ -50,6 +56,10 @@ CopyOnWriteArrayList:
 
 当然也有List synchronizedList = Collections.synchronizedList(new ArrayList());
 但是当你不可避免使用contains() 进行搜索的时，它不可避免会锁住整个list，太恐怖了。
+
+Collections.synchronizedCollection 缺点 用的时候还是要加锁
+
+https://blog.csdn.net/javawubo/article/details/103807386
 
 ==========================================
 
